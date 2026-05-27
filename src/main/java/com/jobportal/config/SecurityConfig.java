@@ -2,12 +2,11 @@ package com.jobportal.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.http.HttpMethod;
-
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfigurationSource;
 
 import com.jobportal.security.JwtFilter;
 
@@ -42,7 +41,8 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
         .cors(cors -> cors.configurationSource(corsConfigurationSource))
 
         .authorizeHttpRequests(auth -> auth
-
+            
+            .requestMatchers("/").permitAll()
             // ✅ Public APIs
             .requestMatchers("/api/auth/**").permitAll()
             .requestMatchers("/api/ai/**").permitAll()
