@@ -6,6 +6,7 @@ import java.util.Collections;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -24,45 +25,56 @@ public class JwtFilter extends OncePerRequestFilter {
     }
 
     @Override
-protected void doFilterInternal(HttpServletRequest request,
-                                HttpServletResponse response,
-                                FilterChain filterChain)
-        throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain filterChain)
+            throws ServletException, IOException {
 
-    String authHeader = request.getHeader("Authorization");
+        // ✅ Skip public auth endpoints
+        String path = request.getServletPath();
 
-    if (authHeader != null && authHeader.startsWith("Bearer ")
-            && SecurityContextHolder.getContext().getAuthentication() == null) {
-
-        String token = authHeader.substring(7);
-
-        try {
-            String email = jwtUtil.extractEmail(token);
-            String role = jwtUtil.extractRole(token);
-
-            UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(
-                            email,
-                            null,
-                            Collections.singletonList(
-                                    new SimpleGrantedAuthority("ROLE_" + role)
-                            )
-                    );
-
-            // 🔥 THIS LINE IS THE REAL FIX
-            authentication.setDetails(
-                    new org.springframework.security.web.authentication.WebAuthenticationDetailsSource()
-                            .buildDetails(request)
-            );
-
-            SecurityContextHolder.getContext().setAuthentication(authentication);
-
-        } catch (Exception e) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        if (path.startsWith("/api/auth")) {
+            filterChain.doFilter(request, response);
             return;
         }
-    }
 
-    filterChain.doFilter(request, response);
-}
+        String authHeader = request.getHeader("Authorization");
+
+        if (authHeader != null
+                && authHeader.startsWith("Bearer ")
+                && SecurityContextHolder.getContext().getAuthentication() == null) {
+
+            String token = authHeader.substring(7);
+
+            try {
+
+                String email = jwtUtil.extractEmail(token);
+                String role = jwtUtil.extractRole(token);
+
+                UsernamePasswordAuthenticationToken authentication =
+                        new UsernamePasswordAuthenticationToken(
+                                email,
+                                null,
+                                Collections.singletonList(
+                                        new SimpleGrantedAuthority("ROLE_" + role)
+                                )
+                        );
+
+                authentication.setDetails(
+                        new WebAuthenticationDetailsSource()
+                                .buildDetails(request)
+                );
+
+                SecurityContextHolder.getContext()
+                        .setAuthentication(authentication);
+
+            } catch (Exception e) {
+
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                return;
+            }
+        }
+
+        filterChain.doFilter(request, response);
+    }
 }
