@@ -214,17 +214,26 @@ if (status.equals("ACCEPTED")) {
             Map<String, String> request = new HashMap<>();
             request.put("resume", resume);
             request.put("skills", skills);
-
+            
+            System.out.println("Calling AI Service...");
+            System.out.println("URL = " + url);
+            System.out.println("Skills = " + skills);
+            
             Map response = restTemplate.postForObject(url, request, Map.class);
 
             if (response != null && response.get("match_score") != null) {
                 return Double.parseDouble(response.get("match_score").toString());
             }
 
-        } catch (Exception e) {
-            System.out.println("⚠️ AI service not available, using fallback score");
-        }
+       catch (Exception e) {
+                System.out.println("=================================");
+                System.out.println("AI SERVICE ERROR");
+                System.out.println("=================================");
 
+                e.printStackTrace();
+
+                System.out.println("=================================");
+       }
         // 🔥 fallback (very important)
         return 50.0;
     }
