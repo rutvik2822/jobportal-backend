@@ -202,41 +202,56 @@ if (status.equals("ACCEPTED")) {
     return updatedApp;
 }
 
-    // 🔥 SAFE AI CALL (IMPORTANT)
-    private double calculateMatch(String skills, String resume) {
+   // 🔥 SAFE AI CALL (IMPORTANT)
+private double calculateMatch(String skills, String resume) {
 
-        try {
-            RestTemplate restTemplate = new RestTemplate();
+    try {
 
-            String url =
-            "https://resume-ai-service-l3qw.onrender.com/predict";
+        RestTemplate restTemplate = new RestTemplate();
 
-            Map<String, String> request = new HashMap<>();
-            request.put("resume", resume);
-            request.put("skills", skills);
-            
-            System.out.println("Calling AI Service...");
-            System.out.println("URL = " + url);
-            System.out.println("Skills = " + skills);
-            
-            Map response = restTemplate.postForObject(url, request, Map.class);
+        String url =
+                "https://resume-ai-service-l3qw.onrender.com/predict";
 
-            if (response != null && response.get("match_score") != null) {
-                return Double.parseDouble(response.get("match_score").toString());
-            }
+        Map<String, String> request = new HashMap<>();
 
-       catch (Exception e) {
-                System.out.println("=================================");
-                System.out.println("AI SERVICE ERROR");
-                System.out.println("=================================");
+        request.put("resume", resume);
+        request.put("skills", skills);
 
-                e.printStackTrace();
+        System.out.println("Calling AI Service...");
+        System.out.println("URL = " + url);
+        System.out.println("Skills = " + skills);
 
-                System.out.println("=================================");
-       }
-        // 🔥 fallback (very important)
-        return 50.0;
+        Map response =
+                restTemplate.postForObject(
+                        url,
+                        request,
+                        Map.class
+                );
+
+        System.out.println("AI Response = " + response);
+
+        if (response != null &&
+                response.get("match_score") != null) {
+
+            return Double.parseDouble(
+                    response.get("match_score").toString()
+            );
+        }
+
+    } catch (Exception e) {
+
+        System.out.println("=================================");
+        System.out.println("AI SERVICE ERROR");
+        System.out.println("=================================");
+
+        e.printStackTrace();
+
+        System.out.println("=================================");
     }
+
+    // fallback
+    return 50.0;
+}
    public List<ApplicationResponse> getApplicationsByUser(
         String email) {
 
