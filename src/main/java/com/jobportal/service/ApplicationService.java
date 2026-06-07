@@ -208,7 +208,8 @@ if (status.equals("ACCEPTED")) {
         try {
             RestTemplate restTemplate = new RestTemplate();
 
-            String url = "http://localhost:5000/predict";
+            String url =
+            "https://resume-ai-service-l3qw.onrender.com/predict";
 
             Map<String, String> request = new HashMap<>();
             request.put("resume", resume);
