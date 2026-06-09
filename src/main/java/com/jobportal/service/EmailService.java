@@ -1,33 +1,59 @@
 package com.jobportal.service;
 
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 @Service
 public class EmailService {
 
-    private final JavaMailSender mailSender;
-
-    public EmailService(JavaMailSender mailSender) {
-        this.mailSender = mailSender;
-    }
+    @Value("${resend.api.key}")
+    private String resendApiKey;
 
     public void sendEmail(String to,
                           String subject,
                           String text) {
 
-        System.out.println("Sending email to: " + to);
+        try {
 
-        SimpleMailMessage message =
-                new SimpleMailMessage();
+            RestTemplate restTemplate = new RestTemplate();
 
-        message.setTo(to);
-        message.setSubject(subject);
-        message.setText(text);
+            HttpHeaders headers = new HttpHeaders();
 
-        mailSender.send(message);
+            headers.setContentType(MediaType.APPLICATION_JSON);
 
-        System.out.println("Email sent successfully");
+            headers.setBearerAuth(resendApiKey);
+
+            Map<String, Object> body = Map.of(
+                    "from", "onboarding@resend.dev",
+                    "to", new String[]{to},
+                    "subject", subject,
+                    "text", text
+            );
+
+            HttpEntity<Map<String, Object>> entity =
+                    new HttpEntity<>(body, headers);
+
+            String response =
+                    restTemplate.postForObject(
+                            "https://api.resend.com/emails",
+                            entity,
+                            String.class
+                    );
+
+            System.out.println("Email sent successfully");
+            System.out.println(response);
+
+        } catch (Exception e) {
+
+            System.out.println("Email sending failed");
+
+            e.printStackTrace();
+        }
     }
 }
