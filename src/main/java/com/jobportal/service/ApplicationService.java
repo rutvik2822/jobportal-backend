@@ -197,9 +197,24 @@ if (status.equals("ACCEPTED")) {
 }
 
     // 🔥 SEND EMAIL
-    emailService.sendEmail(user.getEmail(), subject, message);
+try {
 
-    return updatedApp;
+    emailService.sendEmail(
+            user.getEmail(),
+            subject,
+            message
+    );
+
+    System.out.println("Email sent successfully");
+
+} catch (Exception e) {
+
+    System.out.println("Email sending failed");
+
+    e.printStackTrace();
+}
+
+return updatedApp;
 }
 
    // 🔥 SAFE AI CALL (IMPORTANT)

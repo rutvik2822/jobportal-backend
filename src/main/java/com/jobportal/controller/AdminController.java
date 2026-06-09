@@ -1,5 +1,6 @@
 package com.jobportal.controller;
 
+import java.security.Principal;
 import java.util.List;
 
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -45,7 +46,8 @@ public class AdminController {
         }
 
     @PostMapping("/jobs")
-public Job addJob(@RequestBody JobRequest request) {
+public Job addJob(@RequestBody JobRequest request,
+    Principal principal) {
 
     Job job = new Job();
 
@@ -60,6 +62,8 @@ public Job addJob(@RequestBody JobRequest request) {
     job.setSalary(request.getSalary());
 
     job.setJobType(request.getJobType());
+
+    job.setPostedBy(principal.getName());
 
     return jobRepository.save(job);
 }
