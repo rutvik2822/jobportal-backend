@@ -56,7 +56,7 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
             .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
             // ✅ Role based access
-            .requestMatchers("/api/admin/**").hasRole("ADMIN")
+            .requestMatchers("/api/admin/**").hasRole("SUPER_ADMIN")
 
             .requestMatchers("/api/user/**").hasRole("USER")
 

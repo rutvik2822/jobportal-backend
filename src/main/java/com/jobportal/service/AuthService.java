@@ -10,6 +10,7 @@ import com.jobportal.dto.RegisterRequest;
 import com.jobportal.entity.User;
 import com.jobportal.repository.UserRepository;
 import com.jobportal.security.JwtUtil;
+import com.jobportal.enums.Role;
 
 @Service
 public class AuthService {
@@ -44,9 +45,9 @@ public class AuthService {
             );
 
             user.setRole(
-                    request.getRole() != null
-                            ? request.getRole().toUpperCase()
-                            : "USER"
+            request.getRole() != null
+                ? Role.valueOf(request.getRole().toUpperCase())
+                : Role.USER
             );
 
             userRepository.save(user);
@@ -68,6 +69,6 @@ public class AuthService {
         return "Invalid password";
     }
 
-   return jwtUtil.generateToken(user.getEmail(), user.getRole());
+   return jwtUtil.generateToken(user.getEmail(), user.getRole().name());
     }
 }
