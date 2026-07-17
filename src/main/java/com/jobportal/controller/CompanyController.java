@@ -1,12 +1,13 @@
 package com.jobportal.controller;
 
-import com.jobportal.entity.Company;
+import com.jobportal.dto.company.CompanyRequest;
+import com.jobportal.dto.company.CompanyResponse;
 import com.jobportal.service.CompanyService;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/company")
@@ -20,27 +21,35 @@ public class CompanyController {
 
     // Create Company
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public Company createCompany(@RequestBody Company company) {
-        return companyService.createCompany(company);
+    public ResponseEntity<CompanyResponse> createCompany(@Valid @RequestBody CompanyRequest request) {
+        return ResponseEntity.ok(companyService.createCompany(request));
     }
 
     // Get All Companies
     @GetMapping
-    public List<Company> getAllCompanies() {
-        return companyService.getAllCompanies();
+    public ResponseEntity<List<CompanyResponse>> getAllCompanies() {
+        return ResponseEntity.ok(companyService.getAllCompanies());
     }
 
     // Get Company By ID
     @GetMapping("/{id}")
-    public Optional<Company> getCompanyById(@PathVariable Long id) {
-        return companyService.getCompanyById(id);
+    public ResponseEntity<CompanyResponse> getCompanyById(@PathVariable Long id) {
+        return ResponseEntity.ok(companyService.getCompanyById(id));
     }
+
+    // Update Company
+@PutMapping("/{id}")
+public ResponseEntity<CompanyResponse> updateCompany(
+        @PathVariable Long id,
+        @Valid @RequestBody CompanyRequest request) {
+
+    return ResponseEntity.ok(companyService.updateCompany(id, request));
+}
 
     // Delete Company
     @DeleteMapping("/{id}")
-    public String deleteCompany(@PathVariable Long id) {
+    public ResponseEntity<String> deleteCompany(@PathVariable Long id) {
         companyService.deleteCompany(id);
-        return "Company deleted successfully";
+        return ResponseEntity.ok("Company deleted successfully");
     }
 }
