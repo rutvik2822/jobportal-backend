@@ -23,52 +23,62 @@ public class SecurityConfig {
         this.corsConfigurationSource = corsConfigurationSource;
     }
 
-   @Bean
-public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
-    http
-        .csrf(csrf -> csrf.disable())
+        http
+            .csrf(csrf -> csrf.disable())
 
-        // ✅ Allow iframe preview
-        .headers(headers ->
-            headers.frameOptions(frame -> frame.disable())
-        )
+            // Allow iframe preview
+            .headers(headers ->
+                headers.frameOptions(frame -> frame.disable())
+            )
 
-        // ✅ Disable default Spring login popup
-        .httpBasic(httpBasic -> httpBasic.disable())
+            // Disable default Spring Security login page
+            .httpBasic(httpBasic -> httpBasic.disable())
 
-        .formLogin(form -> form.disable())
+            .formLogin(form -> form.disable())
 
-        // ✅ Use your custom CORS config
-        .cors(cors -> cors.configurationSource(corsConfigurationSource))
+            // Use custom CORS configuration
+            .cors(cors -> cors.configurationSource(corsConfigurationSource))
 
-        .authorizeHttpRequests(auth -> auth
-            
-            .requestMatchers("/").permitAll()
-            // ✅ Public APIs
-            .requestMatchers("/api/auth/**").permitAll()
-            .requestMatchers("/api/ai/**").permitAll()
+            .authorizeHttpRequests(auth -> auth
 
-            // ✅ Resume preview + download
-            .requestMatchers("/api/user/resume/**").permitAll()
+                // Public
+                .requestMatchers("/").permitAll()
 
-            // ✅ Allow OPTIONS requests
-            .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                // Authentication APIs
+                .requestMatchers("/api/auth/**").permitAll()
 
-            // ✅ Role based access
-            .requestMatchers("/api/admin/**").hasRole("SUPER_ADMIN")
+                // AI APIs
+                .requestMatchers("/api/ai/**").permitAll()
 
-            .requestMatchers("/api/user/**").hasRole("USER")
+                // Resume Preview & Download
+                .requestMatchers("/api/user/resume/**").permitAll()
 
-            .anyRequest().authenticated()
-        )
+                // Allow preflight requests
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-        // ✅ JWT filter
-        .addFilterBefore(
-            jwtFilter,
-            UsernamePasswordAuthenticationFilter.class
-        );
+                // SUPER_ADMIN only
+                .requestMatchers("/api/admin/**").hasRole("SUPER_ADMIN")
+                .requestMatchers("/api/admin/companies/**").hasRole("SUPER_ADMIN")
+                .requestMatchers("/api/admin/recruiters/**").hasRole("SUPER_ADMIN")
 
-    return http.build();
-}
+                .requestMatchers("/api/recruiter/**").hasRole("RECRUITER")
+
+                // USER only
+                .requestMatchers("/api/user/**").hasRole("USER")
+
+                // All other endpoints require authentication
+                .anyRequest().authenticated()
+            )
+
+            // JWT Filter
+            .addFilterBefore(
+                jwtFilter,
+                UsernamePasswordAuthenticationFilter.class
+            );
+
+        return http.build();
+    }
 }
