@@ -1,4 +1,4 @@
-package com.jobportal.dto;
+package com.jobportal.dto.job;
 
 public class JobRequest {
 
