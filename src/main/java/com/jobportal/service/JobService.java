@@ -3,6 +3,7 @@ package com.jobportal.service;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.jobportal.dto.job.JobRequest;
 import com.jobportal.dto.job.JobResponse;
@@ -10,7 +11,6 @@ import com.jobportal.entity.Job;
 import com.jobportal.entity.User;
 import com.jobportal.repository.JobRepository;
 import com.jobportal.repository.UserRepository;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class JobService {
@@ -25,41 +25,78 @@ public class JobService {
     }
 
     @Transactional
-public JobResponse createJob(JobRequest request, String recruiterEmail) {
-
-    User recruiter = userRepository.findByEmail(recruiterEmail)
-            .orElseThrow(() -> new RuntimeException("Recruiter not found"));
-
-    Job job = new Job();
-
-    job.setTitle(request.getTitle());
-    job.setDescription(request.getDescription());
-    job.setSkillsRequired(request.getSkillsRequired());
-    job.setLocation(request.getLocation());
-    job.setSalary(request.getSalary());
-    job.setJobType(request.getJobType());
-
-    job.setRecruiter(recruiter);
-    job.setCompany(recruiter.getCompany());
-
-    Job savedJob = jobRepository.save(job);
-
-    return mapToResponse(savedJob);
-}
-
-    public List<Job> getAllJobs() {
-        return jobRepository.findAll();
-    }
-    
-    @Transactional
-    public List<Job> getRecruiterJobs(String recruiterEmail) {
+    public JobResponse createJob(JobRequest request, String recruiterEmail) {
 
         User recruiter = userRepository.findByEmail(recruiterEmail)
                 .orElseThrow(() -> new RuntimeException("Recruiter not found"));
 
-        return jobRepository.findByRecruiter(recruiter);
+        Job job = new Job();
+
+        job.setTitle(request.getTitle());
+        job.setDescription(request.getDescription());
+        job.setSkillsRequired(request.getSkillsRequired());
+        job.setLocation(request.getLocation());
+        job.setSalary(request.getSalary());
+        job.setJobType(request.getJobType());
+
+        job.setRecruiter(recruiter);
+        job.setCompany(recruiter.getCompany());
+
+        Job savedJob = jobRepository.save(job);
+
+        return mapToResponse(savedJob);
     }
 
+    public List<Job> getAllJobs() {
+        return jobRepository.findAll();
+    }
+
+    @Transactional
+    public List<JobResponse> getRecruiterJobs(String recruiterEmail) {
+
+        User recruiter = userRepository.findByEmail(recruiterEmail)
+                .orElseThrow(() -> new RuntimeException("Recruiter not found"));
+
+        return jobRepository.findByRecruiter(recruiter)
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    @Transactional
+    public JobResponse updateJob(Long jobId, JobRequest request, String recruiterEmail) {
+
+        User recruiter = userRepository.findByEmail(recruiterEmail)
+                .orElseThrow(() -> new RuntimeException("Recruiter not found"));
+
+        Job job = jobRepository.findByIdAndRecruiter(jobId, recruiter)
+                .orElseThrow(() -> new RuntimeException("Job not found"));
+
+        job.setTitle(request.getTitle());
+        job.setDescription(request.getDescription());
+        job.setSkillsRequired(request.getSkillsRequired());
+        job.setLocation(request.getLocation());
+        job.setSalary(request.getSalary());
+        job.setJobType(request.getJobType());
+
+        Job updatedJob = jobRepository.save(job);
+
+        return mapToResponse(updatedJob);
+    }
+
+    @Transactional
+public String deleteJob(Long jobId, String recruiterEmail) {
+
+    User recruiter = userRepository.findByEmail(recruiterEmail)
+            .orElseThrow(() -> new RuntimeException("Recruiter not found"));
+
+    Job job = jobRepository.findByIdAndRecruiter(jobId, recruiter)
+            .orElseThrow(() -> new RuntimeException("Job not found"));
+
+    jobRepository.delete(job);
+
+    return "Job deleted successfully";
+}
     private JobResponse mapToResponse(Job job) {
 
         JobResponse response = new JobResponse();
