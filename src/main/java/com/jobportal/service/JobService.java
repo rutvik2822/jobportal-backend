@@ -47,8 +47,13 @@ public class JobService {
         return mapToResponse(savedJob);
     }
 
-    public List<Job> getAllJobs() {
-        return jobRepository.findAll();
+    @Transactional(readOnly = true)
+    public List<JobResponse> getAllJobs() {
+
+    return jobRepository.findAll()
+            .stream()
+            .map(this::mapToResponse)
+            .toList();
     }
 
     @Transactional

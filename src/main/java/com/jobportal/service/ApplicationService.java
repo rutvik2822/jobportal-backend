@@ -22,6 +22,8 @@ import com.jobportal.repository.ApplicationRepository;
 import com.jobportal.repository.JobRepository;
 import com.jobportal.repository.UserRepository;
 
+import org.springframework.transaction.annotation.Transactional;
+
 @Service
 public class ApplicationService {
 
@@ -50,10 +52,15 @@ public class ApplicationService {
     try {
 
         User user = userRepository.findByEmail(email)
-                .orElseThrow();
+        .orElseThrow();
 
-        Job job = jobRepository.findById(jobId)
-                .orElseThrow();
+Job job = jobRepository.findById(jobId)
+        .orElseThrow();
+
+// ✅ Prevent duplicate applications
+if (applicationRepository.findByUserIdAndJobId(user.getId(), job.getId()).isPresent()) {
+    throw new RuntimeException("You have already applied for this job.");
+}
 
         // SAVE FILE
         String uploadDir = "uploads/";
@@ -87,9 +94,9 @@ public class ApplicationService {
 
         Application app = new Application();
 
-        app.setUserId(user.getId());
+        app.setUser(user);
 
-        app.setJobId(job.getId());
+        app.setJob(job);
 
         app.setResume(resumeText);
 
@@ -110,6 +117,7 @@ public class ApplicationService {
     }
 }
 
+    @Transactional(readOnly = true)
     public List<ApplicationResponse> getAllApplications() {
 
     List<Application> applications =
@@ -120,13 +128,9 @@ public class ApplicationService {
 
     for (Application app : applications) {
 
-        User user = userRepository
-                .findById(app.getUserId())
-                .orElse(null);
+        User user = app.getUser();
 
-        Job job = jobRepository
-                .findById(app.getJobId())
-                .orElse(null);
+        Job job = app.getJob();
 
         // ✅ SKIP BROKEN RECORDS
         if (user == null || job == null) {
@@ -155,6 +159,7 @@ public class ApplicationService {
 
     return responseList;
 }
+    @Transactional
     public Application updateStatus(Long applicationId, String status) {
 
     Application app = applicationRepository.findById(applicationId)
@@ -165,15 +170,13 @@ public class ApplicationService {
     Application updatedApp = applicationRepository.save(app);
 
     // 🔥 GET USER
-    User user = userRepository.findById(app.getUserId())
-            .orElseThrow(() -> new RuntimeException("User not found"));
+    User user = app.getUser();
 
     // 🔥 EMAIL SUBJECT
     String subject = "Job Application Status Update";
 
     // 🔥 EMAIL MESSAGE
-    Job job = jobRepository.findById(app.getJobId())
-        .orElseThrow(() -> new RuntimeException("Job not found"));
+    Job job = app.getJob();
 
 String message;
 
@@ -267,8 +270,8 @@ private double calculateMatch(String skills, String resume) {
     // fallback
     return 50.0;
 }
-   public List<ApplicationResponse> getApplicationsByUser(
-        String email) {
+   @Transactional(readOnly = true)
+public List<ApplicationResponse> getApplicationsByUser(String email) {
 
     User user = userRepository
             .findByEmail(email)
@@ -282,9 +285,7 @@ private double calculateMatch(String skills, String resume) {
 
     for (Application app : applications) {
 
-        Job job = jobRepository
-                .findById(app.getJobId())
-                .orElse(null);
+        Job job = app.getJob(); 
 
         // ✅ skip deleted jobs
         if (job == null) {

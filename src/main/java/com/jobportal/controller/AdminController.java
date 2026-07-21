@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.jobportal.dto.ApplicationResponse;
 import com.jobportal.entity.Application;
 import com.jobportal.service.ApplicationService;
+import org.springframework.http.ResponseEntity;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -28,11 +29,13 @@ public class AdminController {
         return applicationService.getAllApplications();
     }
 
-    @PutMapping("/applications/{id}/status")
-    public Application updateStatus(
-            @PathVariable Long id,
-            @RequestParam String status) {
+   @PutMapping("/applications/{id}/status")
+public ResponseEntity<String> updateStatus(
+        @PathVariable Long id,
+        @RequestParam String status) {
 
-        return applicationService.updateStatus(id, status);
-    }
+    applicationService.updateStatus(id, status);
+
+    return ResponseEntity.ok("Application status updated successfully.");
+}
 }

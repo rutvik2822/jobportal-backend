@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.jobportal.entity.Job;
+import com.jobportal.dto.job.JobResponse;
 import com.jobportal.service.JobService;
 
 @RestController
@@ -20,7 +20,7 @@ public class UserJobController {
     }
 
     @GetMapping
-    public List<Job> getAllJobs() {
+    public List<JobResponse> getAllJobs() {
         return jobService.getAllJobs();
     }
 }
