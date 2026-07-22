@@ -15,6 +15,15 @@ import com.jobportal.dto.application.ApplicationStatusRequest;
 import com.jobportal.dto.recruiter.RecruiterDashboardResponse;
 import com.jobportal.service.ApplicationService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
+@Tag(
+    name = "Recruiter Management",
+    description = "APIs for recruiters to manage applications, update application status, and view dashboard statistics."
+)
 @RestController
 @RequestMapping("/api/recruiter")
 public class RecruiterApplicationController {
@@ -25,6 +34,15 @@ public class RecruiterApplicationController {
         this.applicationService = applicationService;
     }
 
+    @Operation(
+        summary = "Get Recruiter Applications",
+        description = "Retrieves all job applications submitted for jobs posted by the authenticated recruiter."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Applications retrieved successfully"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "403", description = "Access denied")
+    })
     @GetMapping("/applications")
     public List<ApplicationResponse> getRecruiterApplications(
             Principal principal) {
@@ -34,6 +52,15 @@ public class RecruiterApplicationController {
         );
     }
 
+    @Operation(
+        summary = "Recruiter Dashboard",
+        description = "Returns dashboard statistics including total jobs, applications, pending, accepted, and rejected applications."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Dashboard retrieved successfully"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "403", description = "Access denied")
+    })
     @GetMapping("/dashboard")
     public RecruiterDashboardResponse getDashboard(
             Principal principal) {
@@ -43,6 +70,17 @@ public class RecruiterApplicationController {
         );
     }
 
+    @Operation(
+        summary = "Update Application Status",
+        description = "Allows the recruiter to update the status of an application (e.g. PENDING, ACCEPTED, REJECTED) for jobs they own."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Application status updated successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid status value"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "403", description = "Access denied"),
+        @ApiResponse(responseCode = "404", description = "Application not found")
+    })
     @PutMapping("/applications/{id}/status")
     public String updateApplicationStatus(
             @PathVariable Long id,

@@ -25,6 +25,9 @@ import com.jobportal.entity.User;
 import com.jobportal.repository.ApplicationRepository;
 import com.jobportal.repository.JobRepository;
 import com.jobportal.repository.UserRepository;
+import com.jobportal.exception.DuplicateApplicationException;
+import com.jobportal.exception.ResourceNotFoundException;
+import com.jobportal.exception.UnauthorizedException;
 
 @Service
 public class ApplicationService {
@@ -32,8 +35,8 @@ public class ApplicationService {
     private final ApplicationRepository applicationRepository;
     private final JobRepository jobRepository;
     private final UserRepository userRepository;
-    private final EmailService emailService;
     private final PdfService pdfService;
+    private final NotificationService notificationService;
     
     private static final Logger logger =
             LoggerFactory.getLogger(ApplicationService.class);
@@ -41,13 +44,13 @@ public class ApplicationService {
     public ApplicationService(ApplicationRepository applicationRepository,
                               JobRepository jobRepository,
                               UserRepository userRepository,
-                              EmailService emailService,
-                              PdfService pdfService) {
+                              PdfService pdfService,
+                              NotificationService notificationService) {
         this.applicationRepository = applicationRepository;
         this.jobRepository = jobRepository;
         this.userRepository = userRepository;
-        this.emailService = emailService;
-        this.pdfService = pdfService; 
+        this.pdfService = pdfService;
+        this.notificationService = notificationService; 
     }
 
     public Application apply(Long jobId,
@@ -57,14 +60,17 @@ public class ApplicationService {
     try {
 
         User user = userRepository.findByEmail(email)
-        .orElseThrow();
+        .orElseThrow(() ->
+        new ResourceNotFoundException("User not found"));
 
 Job job = jobRepository.findById(jobId)
-        .orElseThrow();
+        .orElseThrow(() ->
+        new ResourceNotFoundException("Job not found"));
 
 // ✅ Prevent duplicate applications
 if (applicationRepository.findByUserIdAndJobId(user.getId(), job.getId()).isPresent()) {
-    throw new RuntimeException("You have already applied for this job.");
+    throw new DuplicateApplicationException(
+        "You have already applied for this job.");
 }
 
         // SAVE FILE
@@ -118,11 +124,10 @@ if (applicationRepository.findByUserIdAndJobId(user.getId(), job.getId()).isPres
         Application savedApplication = applicationRepository.save(app);
 
         // Send confirmation email
-        sendApplicationReceivedEmail(savedApplication);
+        notificationService.sendApplicationReceivedEmail(savedApplication);
         
         // Notify recruiter
-        sendRecruiterNotificationEmail(savedApplication);
-        
+        notificationService.sendRecruiterNotificationEmail(savedApplication);
         return savedApplication;
 
     } catch (IOException e) {
@@ -181,17 +186,17 @@ public void updateStatusByRecruiter(Long applicationId,
 
     // Find logged-in recruiter
     User recruiter = userRepository.findByEmail(recruiterEmail)
-            .orElseThrow(() -> new RuntimeException("Recruiter not found"));
+        .orElseThrow(() -> new ResourceNotFoundException("Recruiter not found"));
 
     // Find application
     Application app = applicationRepository.findById(applicationId)
-            .orElseThrow(() -> new RuntimeException("Application not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Application not found"));
 
     Job job = app.getJob();
 
     // Security check
     if (!job.getRecruiter().getId().equals(recruiter.getId())) {
-        throw new RuntimeException(
+        throw new UnauthorizedException(
                 "You are not authorized to update this application.");
     }
 
@@ -201,7 +206,7 @@ public void updateStatusByRecruiter(Long applicationId,
     applicationRepository.save(app);
 
     // Send email
-    sendApplicationStatusEmail(app);
+    notificationService.sendApplicationStatusEmail(app);
 }
 
    // 🔥 SAFE AI CALL (IMPORTANT)
@@ -219,9 +224,9 @@ private double calculateMatch(String skills, String resume) {
         request.put("resume", resume);
         request.put("skills", skills);
 
-        System.out.println("Calling AI Service...");
-        System.out.println("URL = " + url);
-        System.out.println("Skills = " + skills);
+        logger.info("Calling AI Service...");
+        logger.info("URL = {}", url);
+        logger.info("Skills = {}", skills);
 
         Map response =
                 restTemplate.postForObject(
@@ -230,7 +235,7 @@ private double calculateMatch(String skills, String resume) {
                         Map.class
                 );
 
-        System.out.println("AI Response = " + response);
+        logger.info("AI Response = {}", response);
 
         if (response != null &&
                 response.get("match_score") != null) {
@@ -242,13 +247,7 @@ private double calculateMatch(String skills, String resume) {
 
     } catch (Exception e) {
 
-        System.out.println("=================================");
-        System.out.println("AI SERVICE ERROR");
-        System.out.println("=================================");
-
-        e.printStackTrace();
-
-        System.out.println("=================================");
+        logger.error("AI Service Error", e);
     }
 
     // fallback
@@ -304,7 +303,7 @@ public List<ApplicationResponse> getApplicationsForRecruiter(String email) {
 
     User recruiter = userRepository
             .findByEmail(email)
-            .orElseThrow(() -> new RuntimeException("Recruiter not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Recruiter not found"));
 
     List<Application> applications =
             applicationRepository.findByJobRecruiterId(recruiter.getId());
@@ -342,7 +341,7 @@ public RecruiterDashboardResponse getRecruiterDashboard(String email) {
     User recruiter = userRepository
             .findByEmail(email)
             .orElseThrow(() ->
-                    new RuntimeException("Recruiter not found"));
+                    new ResourceNotFoundException("Recruiter not found"));
 
     RecruiterDashboardResponse response =
             new RecruiterDashboardResponse();
@@ -380,135 +379,5 @@ public RecruiterDashboardResponse getRecruiterDashboard(String email) {
     );
 
     return response;
-}
-
-private void sendApplicationReceivedEmail(Application application) {
-
-    User candidate = application.getUser();
-
-    Job job = application.getJob();
-
-    String companyName = "Our Company";
-
-    if (job.getCompany() != null) {
-        companyName = job.getCompany().getCompanyName();
-    }
-
-    String subject = "Application Received - " + job.getTitle();
-
-    String message =
-            "Dear " + candidate.getName() + ",\n\n" +
-            "Thank you for applying for the position of '" + job.getTitle() + "'.\n\n" +
-            "Company: " + companyName + "\n" +
-            "Current Status: PENDING\n\n" +
-            "We have successfully received your application.\n" +
-            "Our recruitment team will review your profile and contact you if you are shortlisted.\n\n" +
-            "Thank you for your interest in joining " + companyName + ".\n\n" +
-            "Best Regards,\n" +
-            companyName + " Recruitment Team";
-
-    try {
-
-        emailService.sendEmail(
-                candidate.getEmail(),
-                subject,
-                message
-        );
-
-        logger.info("Application confirmation email sent to {}", candidate.getEmail());
-
-    } catch (Exception e) {
-
-        logger.error("Failed to send application confirmation email to {}", candidate.getEmail(), e);
-    }
-}
-
-private void sendRecruiterNotificationEmail(Application application) {
-
-    User recruiter = application.getJob().getRecruiter();
-    User candidate = application.getUser();
-    Job job = application.getJob();
-
-    String subject = "New Job Application Received - " + job.getTitle();
-
-    String message =
-            "Dear " + recruiter.getName() + ",\n\n" +
-            "A new candidate has applied for your job posting.\n\n" +
-            "Candidate Name: " + candidate.getName() + "\n" +
-            "Candidate Email: " + candidate.getEmail() + "\n" +
-            "Job Title: " + job.getTitle() + "\n" +
-            "AI Match Score: " + application.getMatchScore() + "%\n\n" +
-            "Please log in to the Job Portal to review the application.\n\n" +
-            "Best Regards,\n" +
-            "AI Recruitment Portal";
-
-    try {
-
-        emailService.sendEmail(
-                recruiter.getEmail(),
-                subject,
-                message
-        );
-
-        logger.info("Recruiter notification email sent to {}", recruiter.getEmail());
-
-    } catch (Exception e) {
-
-        logger.error("Failed to send recruiter notification email to {}", recruiter.getEmail(), e);
-
-    }
-}
-private void sendApplicationStatusEmail(Application application) {
-
-    User candidate = application.getUser();
-    Job job = application.getJob();
-
-    String subject;
-    String message;
-
-    if ("ACCEPTED".equalsIgnoreCase(application.getStatus())) {
-
-        subject = "Congratulations! Your Application Has Been Accepted";
-
-        message =
-                "Dear " + candidate.getName() + ",\n\n" +
-                "Congratulations!\n\n" +
-                "Your application for the position '" + job.getTitle() + "' has been ACCEPTED.\n\n" +
-                "The recruiter will contact you regarding the next steps.\n\n" +
-                "Best Wishes,\n" +
-                "AI Recruitment Portal";
-
-    } else if ("REJECTED".equalsIgnoreCase(application.getStatus())) {
-
-        subject = "Application Status Update";
-
-        message =
-                "Dear " + candidate.getName() + ",\n\n" +
-                "Thank you for applying for the position '" + job.getTitle() + "'.\n\n" +
-                "Unfortunately, your application was not selected this time.\n\n" +
-                "We encourage you to apply for future opportunities.\n\n" +
-                "Best Regards,\n" +
-                "AI Recruitment Portal";
-
-    } else {
-
-        return;
-    }
-
-    try {
-
-        emailService.sendEmail(
-                candidate.getEmail(),
-                subject,
-                message
-        );
-
-        logger.info("Status update email sent to {}", candidate.getEmail());
-
-    } catch (Exception e) {
-
-        logger.error("Failed to send status update email to {}", candidate.getEmail(), e);
-
-    }
 }
 }

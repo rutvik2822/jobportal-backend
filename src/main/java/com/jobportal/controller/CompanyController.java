@@ -16,8 +16,16 @@ import com.jobportal.dto.company.CompanyRequest;
 import com.jobportal.dto.company.CompanyResponse;
 import com.jobportal.service.CompanyService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
+@Tag(
+    name = "Company Management",
+    description = "APIs for SUPER_ADMIN to create, retrieve, update, and delete company information."
+)
 @RestController
 @RequestMapping("/api/admin/companies")
 public class CompanyController {
@@ -28,36 +36,88 @@ public class CompanyController {
         this.companyService = companyService;
     }
 
-    // Create Company
+    @Operation(
+        summary = "Create Company",
+        description = "Creates a new company. Accessible only to SUPER_ADMIN."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Company created successfully"),
+        @ApiResponse(responseCode = "400", description = "Validation failed"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "403", description = "Access denied")
+    })
     @PostMapping
-    public ResponseEntity<CompanyResponse> createCompany(@Valid @RequestBody CompanyRequest request) {
+    public ResponseEntity<CompanyResponse> createCompany(
+            @Valid @RequestBody CompanyRequest request) {
+
         return ResponseEntity.ok(companyService.createCompany(request));
     }
 
-    // Get All Companies
+    @Operation(
+        summary = "Get All Companies",
+        description = "Retrieves a list of all registered companies."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Companies retrieved successfully"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "403", description = "Access denied")
+    })
     @GetMapping
     public ResponseEntity<List<CompanyResponse>> getAllCompanies() {
+
         return ResponseEntity.ok(companyService.getAllCompanies());
     }
 
-    // Get Company By ID
+    @Operation(
+        summary = "Get Company By ID",
+        description = "Retrieves the details of a specific company using its ID."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Company retrieved successfully"),
+        @ApiResponse(responseCode = "404", description = "Company not found"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "403", description = "Access denied")
+    })
     @GetMapping("/{id}")
-    public ResponseEntity<CompanyResponse> getCompanyById(@PathVariable Long id) {
+    public ResponseEntity<CompanyResponse> getCompanyById(
+            @PathVariable Long id) {
+
         return ResponseEntity.ok(companyService.getCompanyById(id));
     }
 
-    // Update Company
-@PutMapping("/{id}")
-public ResponseEntity<CompanyResponse> updateCompany(
-        @PathVariable Long id,
-        @Valid @RequestBody CompanyRequest request) {
+    @Operation(
+        summary = "Update Company",
+        description = "Updates the details of an existing company."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Company updated successfully"),
+        @ApiResponse(responseCode = "400", description = "Validation failed"),
+        @ApiResponse(responseCode = "404", description = "Company not found"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "403", description = "Access denied")
+    })
+    @PutMapping("/{id}")
+    public ResponseEntity<CompanyResponse> updateCompany(
+            @PathVariable Long id,
+            @Valid @RequestBody CompanyRequest request) {
 
-    return ResponseEntity.ok(companyService.updateCompany(id, request));
-}
+        return ResponseEntity.ok(companyService.updateCompany(id, request));
+    }
 
-    // Delete Company
+    @Operation(
+        summary = "Delete Company",
+        description = "Deletes a company using its ID."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Company deleted successfully"),
+        @ApiResponse(responseCode = "404", description = "Company not found"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "403", description = "Access denied")
+    })
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteCompany(@PathVariable Long id) {
+    public ResponseEntity<String> deleteCompany(
+            @PathVariable Long id) {
+
         companyService.deleteCompany(id);
         return ResponseEntity.ok("Company deleted successfully");
     }

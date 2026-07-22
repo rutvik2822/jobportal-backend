@@ -9,11 +9,16 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Service
 public class EmailService {
 
     @Value("${resend.api.key}")
     private String resendApiKey;
+    private static final Logger logger =
+        LoggerFactory.getLogger(EmailService.class);
 
     public void sendEmail(String to,
                           String subject,
@@ -46,14 +51,12 @@ public class EmailService {
                             String.class
                     );
 
-            System.out.println("Email sent successfully");
-            System.out.println(response);
+            logger.info("Email sent successfully");
+            logger.info("Resend Response: {}", response);
 
         } catch (Exception e) {
 
-            System.out.println("Email sending failed");
-
-            e.printStackTrace();
+            logger.error("Email sending failed", e);
         }
     }
 }

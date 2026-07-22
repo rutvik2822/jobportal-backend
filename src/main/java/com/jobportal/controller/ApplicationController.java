@@ -20,6 +20,15 @@ import com.jobportal.dto.ApplicationResponse;
 import com.jobportal.entity.Application;
 import com.jobportal.service.ApplicationService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
+@Tag(
+    name = "Job Applications",
+    description = "APIs for candidates to apply for jobs, manage resumes, and view submitted applications."
+)
 @RestController
 @RequestMapping("/api/user")
 public class ApplicationController {
@@ -30,6 +39,17 @@ public class ApplicationController {
         this.applicationService = applicationService;
     }
 
+    @Operation(
+        summary = "Apply for a Job",
+        description = "Allows an authenticated candidate to apply for a job by uploading a resume."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Application submitted successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid request or resume"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "404", description = "Job not found"),
+        @ApiResponse(responseCode = "409", description = "Already applied for this job")
+    })
     @PostMapping("/apply")
     public Application apply(
             @RequestParam("jobId") Long jobId,
@@ -47,6 +67,14 @@ public class ApplicationController {
         );
     }
 
+    @Operation(
+        summary = "Download Resume",
+        description = "Downloads the uploaded resume file for a candidate."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Resume downloaded successfully"),
+        @ApiResponse(responseCode = "404", description = "Resume file not found")
+    })
     @GetMapping("/resume")
     public ResponseEntity<Resource> downloadResume(
             @RequestParam String fileName
@@ -70,6 +98,14 @@ public class ApplicationController {
                 .body(resource);
     }
 
+    @Operation(
+        summary = "Preview Resume",
+        description = "Displays the uploaded PDF resume directly in the browser."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Resume preview loaded successfully"),
+        @ApiResponse(responseCode = "404", description = "Resume file not found")
+    })
     @GetMapping("/resume/view")
     public ResponseEntity<Resource> previewResume(
             @RequestParam String fileName
@@ -90,6 +126,14 @@ public class ApplicationController {
                 .body(resource);
     }
 
+    @Operation(
+        summary = "Get My Applications",
+        description = "Retrieves all job applications submitted by the authenticated candidate."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Applications retrieved successfully"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized")
+    })
     @GetMapping("/applications")
     public List<ApplicationResponse> getMyApplications(
             Principal principal) {
