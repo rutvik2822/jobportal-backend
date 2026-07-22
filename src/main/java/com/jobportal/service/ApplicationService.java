@@ -10,19 +10,21 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.jobportal.dto.ApplicationResponse;
+import com.jobportal.dto.recruiter.RecruiterDashboardResponse;
 import com.jobportal.entity.Application;
 import com.jobportal.entity.Job;
 import com.jobportal.entity.User;
 import com.jobportal.repository.ApplicationRepository;
 import com.jobportal.repository.JobRepository;
 import com.jobportal.repository.UserRepository;
-
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ApplicationService {
@@ -32,6 +34,9 @@ public class ApplicationService {
     private final UserRepository userRepository;
     private final EmailService emailService;
     private final PdfService pdfService;
+    
+    private static final Logger logger =
+            LoggerFactory.getLogger(ApplicationService.class);
 
     public ApplicationService(ApplicationRepository applicationRepository,
                               JobRepository jobRepository,
@@ -109,7 +114,16 @@ if (applicationRepository.findByUserIdAndJobId(user.getId(), job.getId()).isPres
 
         app.setResumeFilePath(filePath.toString());
 
-        return applicationRepository.save(app);
+        // Save application
+        Application savedApplication = applicationRepository.save(app);
+
+        // Send confirmation email
+        sendApplicationReceivedEmail(savedApplication);
+        
+        // Notify recruiter
+        sendRecruiterNotificationEmail(savedApplication);
+        
+        return savedApplication;
 
     } catch (IOException e) {
 
@@ -159,65 +173,35 @@ if (applicationRepository.findByUserIdAndJobId(user.getId(), job.getId()).isPres
 
     return responseList;
 }
-    @Transactional
-    public Application updateStatus(Long applicationId, String status) {
 
+@Transactional
+public void updateStatusByRecruiter(Long applicationId,
+                                    String status,
+                                    String recruiterEmail) {
+
+    // Find logged-in recruiter
+    User recruiter = userRepository.findByEmail(recruiterEmail)
+            .orElseThrow(() -> new RuntimeException("Recruiter not found"));
+
+    // Find application
     Application app = applicationRepository.findById(applicationId)
             .orElseThrow(() -> new RuntimeException("Application not found"));
 
-    app.setStatus(status);
-
-    Application updatedApp = applicationRepository.save(app);
-
-    // 🔥 GET USER
-    User user = app.getUser();
-
-    // 🔥 EMAIL SUBJECT
-    String subject = "Job Application Status Update";
-
-    // 🔥 EMAIL MESSAGE
     Job job = app.getJob();
 
-String message;
+    // Security check
+    if (!job.getRecruiter().getId().equals(recruiter.getId())) {
+        throw new RuntimeException(
+                "You are not authorized to update this application.");
+    }
 
-if (status.equals("ACCEPTED")) {
+    // Update status
+    app.setStatus(status);
 
-    message =
-            "Congratulations!\n\n" +
-            "Your application for the position of '" + job.getTitle() + "' has been ACCEPTED.\n\n" +
-            "Our team will contact you shortly regarding the next steps.\n\n" +
-            "Best Regards,\n" +
-            "Job Portal Team";
+    applicationRepository.save(app);
 
-} else {
-
-    message =
-            "Dear Candidate,\n\n" +
-            "We regret to inform you that your application for the position of '" + job.getTitle() + "' has been REJECTED.\n\n" +
-            "Thank you for applying and we wish you success in your future opportunities.\n\n" +
-            "Best Regards,\n" +
-            "Job Portal Team";
-}
-
-    // 🔥 SEND EMAIL
-try {
-
-    emailService.sendEmail(
-            user.getEmail(),
-            subject,
-            message
-    );
-
-    System.out.println("Email sent successfully");
-
-} catch (Exception e) {
-
-    System.out.println("Email sending failed");
-
-    e.printStackTrace();
-}
-
-return updatedApp;
+    // Send email
+    sendApplicationStatusEmail(app);
 }
 
    // 🔥 SAFE AI CALL (IMPORTANT)
@@ -313,5 +297,218 @@ public List<ApplicationResponse> getApplicationsByUser(String email) {
     }
 
     return responseList;
+}
+
+@Transactional(readOnly = true)
+public List<ApplicationResponse> getApplicationsForRecruiter(String email) {
+
+    User recruiter = userRepository
+            .findByEmail(email)
+            .orElseThrow(() -> new RuntimeException("Recruiter not found"));
+
+    List<Application> applications =
+            applicationRepository.findByJobRecruiterId(recruiter.getId());
+
+    List<ApplicationResponse> responseList = new ArrayList<>();
+
+    for (Application app : applications) {
+
+        User candidate = app.getUser();
+        Job job = app.getJob();
+
+        if (candidate == null || job == null) {
+            continue;
+        }
+
+        ApplicationResponse response = new ApplicationResponse();
+
+        response.setId(app.getId());
+        response.setUserEmail(candidate.getEmail());
+        response.setJobTitle(job.getTitle());
+        response.setMatchScore(app.getMatchScore());
+        response.setStatus(app.getStatus());
+        response.setResumeFileName(app.getResumeFileName());
+
+        responseList.add(response);
+    }
+
+    return responseList;
+}
+
+@Transactional(readOnly = true)
+public RecruiterDashboardResponse getRecruiterDashboard(String email) {
+
+    // Find logged-in recruiter
+    User recruiter = userRepository
+            .findByEmail(email)
+            .orElseThrow(() ->
+                    new RuntimeException("Recruiter not found"));
+
+    RecruiterDashboardResponse response =
+            new RecruiterDashboardResponse();
+
+    // Total jobs posted
+    response.setTotalJobs(
+            jobRepository.countByRecruiter(recruiter)
+    );
+
+    // Total applications received
+    response.setTotalApplications(
+            applicationRepository.countByJobRecruiterId(
+                    recruiter.getId())
+    );
+
+    // Pending applications
+    response.setPending(
+            applicationRepository.countByJobRecruiterIdAndStatus(
+                    recruiter.getId(),
+                    "PENDING")
+    );
+
+    // Accepted applications
+    response.setAccepted(
+            applicationRepository.countByJobRecruiterIdAndStatus(
+                    recruiter.getId(),
+                    "ACCEPTED")
+    );
+
+    // Rejected applications
+    response.setRejected(
+            applicationRepository.countByJobRecruiterIdAndStatus(
+                    recruiter.getId(),
+                    "REJECTED")
+    );
+
+    return response;
+}
+
+private void sendApplicationReceivedEmail(Application application) {
+
+    User candidate = application.getUser();
+
+    Job job = application.getJob();
+
+    String companyName = "Our Company";
+
+    if (job.getCompany() != null) {
+        companyName = job.getCompany().getCompanyName();
+    }
+
+    String subject = "Application Received - " + job.getTitle();
+
+    String message =
+            "Dear " + candidate.getName() + ",\n\n" +
+            "Thank you for applying for the position of '" + job.getTitle() + "'.\n\n" +
+            "Company: " + companyName + "\n" +
+            "Current Status: PENDING\n\n" +
+            "We have successfully received your application.\n" +
+            "Our recruitment team will review your profile and contact you if you are shortlisted.\n\n" +
+            "Thank you for your interest in joining " + companyName + ".\n\n" +
+            "Best Regards,\n" +
+            companyName + " Recruitment Team";
+
+    try {
+
+        emailService.sendEmail(
+                candidate.getEmail(),
+                subject,
+                message
+        );
+
+        logger.info("Application confirmation email sent to {}", candidate.getEmail());
+
+    } catch (Exception e) {
+
+        logger.error("Failed to send application confirmation email to {}", candidate.getEmail(), e);
+    }
+}
+
+private void sendRecruiterNotificationEmail(Application application) {
+
+    User recruiter = application.getJob().getRecruiter();
+    User candidate = application.getUser();
+    Job job = application.getJob();
+
+    String subject = "New Job Application Received - " + job.getTitle();
+
+    String message =
+            "Dear " + recruiter.getName() + ",\n\n" +
+            "A new candidate has applied for your job posting.\n\n" +
+            "Candidate Name: " + candidate.getName() + "\n" +
+            "Candidate Email: " + candidate.getEmail() + "\n" +
+            "Job Title: " + job.getTitle() + "\n" +
+            "AI Match Score: " + application.getMatchScore() + "%\n\n" +
+            "Please log in to the Job Portal to review the application.\n\n" +
+            "Best Regards,\n" +
+            "AI Recruitment Portal";
+
+    try {
+
+        emailService.sendEmail(
+                recruiter.getEmail(),
+                subject,
+                message
+        );
+
+        logger.info("Recruiter notification email sent to {}", recruiter.getEmail());
+
+    } catch (Exception e) {
+
+        logger.error("Failed to send recruiter notification email to {}", recruiter.getEmail(), e);
+
+    }
+}
+private void sendApplicationStatusEmail(Application application) {
+
+    User candidate = application.getUser();
+    Job job = application.getJob();
+
+    String subject;
+    String message;
+
+    if ("ACCEPTED".equalsIgnoreCase(application.getStatus())) {
+
+        subject = "Congratulations! Your Application Has Been Accepted";
+
+        message =
+                "Dear " + candidate.getName() + ",\n\n" +
+                "Congratulations!\n\n" +
+                "Your application for the position '" + job.getTitle() + "' has been ACCEPTED.\n\n" +
+                "The recruiter will contact you regarding the next steps.\n\n" +
+                "Best Wishes,\n" +
+                "AI Recruitment Portal";
+
+    } else if ("REJECTED".equalsIgnoreCase(application.getStatus())) {
+
+        subject = "Application Status Update";
+
+        message =
+                "Dear " + candidate.getName() + ",\n\n" +
+                "Thank you for applying for the position '" + job.getTitle() + "'.\n\n" +
+                "Unfortunately, your application was not selected this time.\n\n" +
+                "We encourage you to apply for future opportunities.\n\n" +
+                "Best Regards,\n" +
+                "AI Recruitment Portal";
+
+    } else {
+
+        return;
+    }
+
+    try {
+
+        emailService.sendEmail(
+                candidate.getEmail(),
+                subject,
+                message
+        );
+
+        logger.info("Status update email sent to {}", candidate.getEmail());
+
+    } catch (Exception e) {
+
+        logger.error("Failed to send status update email to {}", candidate.getEmail(), e);
+
+    }
 }
 }
