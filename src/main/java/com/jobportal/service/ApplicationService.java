@@ -1,20 +1,13 @@
 package com.jobportal.service;
 
-import java.io.File;
+
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.jobportal.dto.ApplicationResponse;
@@ -36,20 +29,24 @@ public class ApplicationService {
     private final JobRepository jobRepository;
     private final UserRepository userRepository;
     private final PdfService pdfService;
+    private final FileStorageService fileStorageService;
+    private final ResumeMatcherService resumeMatcherService;
     private final NotificationService notificationService;
     
-    private static final Logger logger =
-            LoggerFactory.getLogger(ApplicationService.class);
 
     public ApplicationService(ApplicationRepository applicationRepository,
-                              JobRepository jobRepository,
-                              UserRepository userRepository,
-                              PdfService pdfService,
-                              NotificationService notificationService) {
+                          JobRepository jobRepository,
+                          UserRepository userRepository,
+                          PdfService pdfService,
+                          FileStorageService fileStorageService,
+                          ResumeMatcherService resumeMatcherService,
+                          NotificationService notificationService) {
         this.applicationRepository = applicationRepository;
         this.jobRepository = jobRepository;
         this.userRepository = userRepository;
         this.pdfService = pdfService;
+        this.fileStorageService = fileStorageService;
+        this.resumeMatcherService = resumeMatcherService;
         this.notificationService = notificationService; 
     }
 
@@ -74,34 +71,17 @@ if (applicationRepository.findByUserIdAndJobId(user.getId(), job.getId()).isPres
 }
 
         // SAVE FILE
-        String uploadDir = "uploads/";
-
-        File dir = new File(uploadDir);
-
-        if (!dir.exists()) {
-            dir.mkdirs();
-        }
-
-        String fileName =
-                System.currentTimeMillis()
-                + "_"
-                + file.getOriginalFilename();
-
-        Path filePath =
-                Paths.get(uploadDir, fileName);
-
-        Files.write(filePath, file.getBytes());
+        String filePath = fileStorageService.storeFile(file);
 
         // EXTRACT TEXT
         String resumeText =
                 pdfService.extractText(file.getInputStream());
 
         // AI MATCH
-        double score =
-                calculateMatch(
-                        job.getSkillsRequired(),
-                        resumeText
-                );
+        double score = resumeMatcherService.calculateMatch(
+        job.getSkillsRequired(),
+        resumeText
+        );
 
         Application app = new Application();
 
@@ -116,9 +96,12 @@ if (applicationRepository.findByUserIdAndJobId(user.getId(), job.getId()).isPres
         app.setStatus("PENDING");
 
         // SAVE FILE INFO
-        app.setResumeFileName(fileName);
+        app.setResumeFilePath(filePath);
 
-        app.setResumeFilePath(filePath.toString());
+        app.setResumeFileName(
+        Paths.get(filePath)
+             .getFileName()
+             .toString());
 
         // Save application
         Application savedApplication = applicationRepository.save(app);
@@ -209,50 +192,6 @@ public void updateStatusByRecruiter(Long applicationId,
     notificationService.sendApplicationStatusEmail(app);
 }
 
-   // 🔥 SAFE AI CALL (IMPORTANT)
-private double calculateMatch(String skills, String resume) {
-
-    try {
-
-        RestTemplate restTemplate = new RestTemplate();
-
-        String url =
-                "https://resume-ai-service-l3qw.onrender.com/predict";
-
-        Map<String, String> request = new HashMap<>();
-
-        request.put("resume", resume);
-        request.put("skills", skills);
-
-        logger.info("Calling AI Service...");
-        logger.info("URL = {}", url);
-        logger.info("Skills = {}", skills);
-
-        Map response =
-                restTemplate.postForObject(
-                        url,
-                        request,
-                        Map.class
-                );
-
-        logger.info("AI Response = {}", response);
-
-        if (response != null &&
-                response.get("match_score") != null) {
-
-            return Double.parseDouble(
-                    response.get("match_score").toString()
-            );
-        }
-
-    } catch (Exception e) {
-
-        logger.error("AI Service Error", e);
-    }
-
-    // fallback
-    return 50.0;
-}
    @Transactional(readOnly = true)
 public List<ApplicationResponse> getApplicationsByUser(String email) {
 
