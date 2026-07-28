@@ -1,5 +1,26 @@
+# Maven
 target/
+effective-pom.xml
+
+# IDE
 .idea/
 .vscode/
+*.iml
+
+# Logs
 *.log
+
+# Environment variables
 .env
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Java
+*.class
+
+# Maven Wrapper (keep these if you use Maven Wrapper)
+!.mvn/wrapper/maven-wrapper.jar
+!mvnw
+!mvnw.cmd
