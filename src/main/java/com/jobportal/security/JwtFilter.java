@@ -70,6 +70,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
             } catch (Exception e) {
 
+                
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 return;
             }

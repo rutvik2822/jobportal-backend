@@ -1,7 +1,10 @@
 package com.jobportal.controller;
 
+import java.util.List;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -51,4 +54,21 @@ public class RecruiterController {
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
+
+    @Operation(
+    summary = "Get All Recruiters",
+    description = "Retrieves all recruiter accounts. Accessible only to SUPER_ADMIN."
+)
+@ApiResponses(value = {
+    @ApiResponse(responseCode = "200", description = "Recruiters retrieved successfully"),
+    @ApiResponse(responseCode = "401", description = "Unauthorized"),
+    @ApiResponse(responseCode = "403", description = "Access denied")
+})
+@GetMapping
+public ResponseEntity<List<RecruiterResponse>> getAllRecruiters() {
+
+    return ResponseEntity.ok(
+            recruiterService.getAllRecruiters()
+    );
+}
 }

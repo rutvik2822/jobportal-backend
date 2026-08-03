@@ -1,7 +1,11 @@
 package com.jobportal.service;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.jobportal.dto.recruiter.RecruiterProfileResponse;
 import com.jobportal.dto.recruiter.RecruiterRequest;
@@ -11,7 +15,6 @@ import com.jobportal.entity.User;
 import com.jobportal.enums.Role;
 import com.jobportal.repository.CompanyRepository;
 import com.jobportal.repository.UserRepository;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class RecruiterService {
@@ -54,6 +57,32 @@ public class RecruiterService {
 
         return response;
     }
+    @Transactional
+    public List<RecruiterResponse> getAllRecruiters() {
+
+    return userRepository.findAll()
+            .stream()
+            .filter(user -> user.getRole() == Role.RECRUITER)
+            .map(recruiter -> {
+
+                RecruiterResponse response = new RecruiterResponse();
+
+                response.setId(recruiter.getId());
+                response.setName(recruiter.getName());
+                response.setEmail(recruiter.getEmail());
+
+                if (recruiter.getCompany() != null) {
+                    response.setCompanyName(
+                            recruiter.getCompany().getCompanyName()
+                    );
+                }
+
+                return response;
+
+            })
+            .collect(Collectors.toList());
+            }
+
     @Transactional
     public RecruiterProfileResponse getRecruiterProfile(String email) {
 
