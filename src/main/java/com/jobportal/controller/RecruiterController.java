@@ -4,8 +4,11 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -70,5 +73,57 @@ public ResponseEntity<List<RecruiterResponse>> getAllRecruiters() {
     return ResponseEntity.ok(
             recruiterService.getAllRecruiters()
     );
+}
+
+@Operation(
+    summary = "Get Recruiter By ID",
+    description = "Retrieves recruiter details by recruiter ID."
+)
+@ApiResponses(value = {
+    @ApiResponse(responseCode = "200", description = "Recruiter found"),
+    @ApiResponse(responseCode = "404", description = "Recruiter not found")
+})
+@GetMapping("/{id}")
+public ResponseEntity<RecruiterResponse> getRecruiterById(
+        @PathVariable Long id) {
+
+    return ResponseEntity.ok(
+            recruiterService.getRecruiterById(id)
+    );
+}
+
+@Operation(
+    summary = "Update Recruiter",
+    description = "Updates recruiter details."
+)
+@ApiResponses(value = {
+    @ApiResponse(responseCode = "200", description = "Recruiter updated successfully"),
+    @ApiResponse(responseCode = "404", description = "Recruiter not found")
+})
+@PutMapping("/{id}")
+public ResponseEntity<RecruiterResponse> updateRecruiter(
+        @PathVariable Long id,
+        @Valid @RequestBody RecruiterRequest request) {
+
+    return ResponseEntity.ok(
+            recruiterService.updateRecruiter(id, request)
+    );
+}
+
+@Operation(
+    summary = "Delete Recruiter",
+    description = "Deletes a recruiter account by ID."
+)
+@ApiResponses(value = {
+    @ApiResponse(responseCode = "200", description = "Recruiter deleted successfully"),
+    @ApiResponse(responseCode = "404", description = "Recruiter not found")
+})
+@DeleteMapping("/{id}")
+public ResponseEntity<String> deleteRecruiter(
+        @PathVariable Long id) {
+
+    recruiterService.deleteRecruiter(id);
+
+    return ResponseEntity.ok("Recruiter deleted successfully");
 }
 }

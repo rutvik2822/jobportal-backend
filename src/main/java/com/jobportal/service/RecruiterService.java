@@ -14,6 +14,7 @@ import com.jobportal.entity.Company;
 import com.jobportal.entity.User;
 import com.jobportal.enums.Role;
 import com.jobportal.repository.CompanyRepository;
+import com.jobportal.repository.JobRepository;
 import com.jobportal.repository.UserRepository;
 
 @Service
@@ -22,13 +23,16 @@ public class RecruiterService {
     private final UserRepository userRepository;
     private final CompanyRepository companyRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JobRepository jobRepository;
 
     public RecruiterService(UserRepository userRepository,
                             CompanyRepository companyRepository,
-                            PasswordEncoder passwordEncoder) {
+                            PasswordEncoder passwordEncoder,
+                            JobRepository jobRepository) {
         this.userRepository = userRepository;
         this.companyRepository = companyRepository;
         this.passwordEncoder = passwordEncoder;
+        this.jobRepository = jobRepository;
     }
 
     public RecruiterResponse createRecruiter(RecruiterRequest request) {
@@ -101,5 +105,79 @@ public class RecruiterService {
     }
 
     return response;
+}
+@Transactional(readOnly = true)
+public RecruiterResponse getRecruiterById(Long id) {
+
+    User recruiter = userRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Recruiter not found"));
+
+    if (recruiter.getRole() != Role.RECRUITER) {
+        throw new RuntimeException("User is not a recruiter");
+    }
+
+    RecruiterResponse response = new RecruiterResponse();
+
+    response.setId(recruiter.getId());
+    response.setName(recruiter.getName());
+    response.setEmail(recruiter.getEmail());
+
+    if (recruiter.getCompany() != null) {
+        response.setCompanyName(recruiter.getCompany().getCompanyName());
+    }
+
+    return response;
+}
+
+@Transactional
+public RecruiterResponse updateRecruiter(Long id, RecruiterRequest request) {
+
+    User recruiter = userRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Recruiter not found"));
+
+    if (recruiter.getRole() != Role.RECRUITER) {
+        throw new RuntimeException("User is not a recruiter");
+    }
+
+    Company company = companyRepository.findById(request.getCompanyId())
+            .orElseThrow(() -> new RuntimeException("Company not found"));
+
+    recruiter.setName(request.getName());
+    recruiter.setEmail(request.getEmail());
+
+    // Encode new password
+    recruiter.setPassword(
+            passwordEncoder.encode(request.getPassword())
+    );
+
+    recruiter.setCompany(company);
+
+    User updatedRecruiter = userRepository.save(recruiter);
+
+    RecruiterResponse response = new RecruiterResponse();
+    response.setId(updatedRecruiter.getId());
+    response.setName(updatedRecruiter.getName());
+    response.setEmail(updatedRecruiter.getEmail());
+    response.setCompanyName(company.getCompanyName());
+
+    return response;
+}
+
+@Transactional
+public void deleteRecruiter(Long id) {
+
+    User recruiter = userRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Recruiter not found"));
+
+    if (recruiter.getRole() != Role.RECRUITER) {
+        throw new RuntimeException("User is not a recruiter");
+    }
+
+    if (jobRepository.existsByRecruiter(recruiter)) {
+        throw new RuntimeException(
+                "Cannot delete recruiter because they have posted jobs.");
+    }
+
+    userRepository.delete(recruiter);
 }
 }
