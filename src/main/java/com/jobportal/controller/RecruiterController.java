@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.jobportal.dto.recruiter.RecruiterRequest;
 import com.jobportal.dto.recruiter.RecruiterResponse;
+import com.jobportal.dto.recruiter.RecruiterUpdateRequest;
 import com.jobportal.service.RecruiterService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -94,16 +95,17 @@ public ResponseEntity<RecruiterResponse> getRecruiterById(
 
 @Operation(
     summary = "Update Recruiter",
-    description = "Updates recruiter details."
+    description = "Updates recruiter information. Password is optional."
 )
 @ApiResponses(value = {
     @ApiResponse(responseCode = "200", description = "Recruiter updated successfully"),
+    @ApiResponse(responseCode = "400", description = "Validation failed"),
     @ApiResponse(responseCode = "404", description = "Recruiter not found")
 })
 @PutMapping("/{id}")
 public ResponseEntity<RecruiterResponse> updateRecruiter(
         @PathVariable Long id,
-        @Valid @RequestBody RecruiterRequest request) {
+        @Valid @RequestBody RecruiterUpdateRequest request) {
 
     return ResponseEntity.ok(
             recruiterService.updateRecruiter(id, request)

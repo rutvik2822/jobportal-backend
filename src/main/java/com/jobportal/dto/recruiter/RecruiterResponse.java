@@ -9,4 +9,5 @@ public class RecruiterResponse {
     private String name;
     private String email;
     private String companyName;
+    private Long companyId;
 }

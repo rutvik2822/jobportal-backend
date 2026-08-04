@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.jobportal.dto.recruiter.RecruiterProfileResponse;
 import com.jobportal.dto.recruiter.RecruiterRequest;
 import com.jobportal.dto.recruiter.RecruiterResponse;
+import com.jobportal.dto.recruiter.RecruiterUpdateRequest;
 import com.jobportal.entity.Company;
 import com.jobportal.entity.User;
 import com.jobportal.enums.Role;
@@ -57,6 +58,7 @@ public class RecruiterService {
         response.setId(savedRecruiter.getId());
         response.setName(savedRecruiter.getName());
         response.setEmail(savedRecruiter.getEmail());
+        response.setCompanyId(company.getId());
         response.setCompanyName(company.getCompanyName());
 
         return response;
@@ -72,14 +74,19 @@ public class RecruiterService {
                 RecruiterResponse response = new RecruiterResponse();
 
                 response.setId(recruiter.getId());
-                response.setName(recruiter.getName());
-                response.setEmail(recruiter.getEmail());
+                    response.setName(recruiter.getName());
+                    response.setEmail(recruiter.getEmail());
 
-                if (recruiter.getCompany() != null) {
-                    response.setCompanyName(
-                            recruiter.getCompany().getCompanyName()
-                    );
-                }
+                    if (recruiter.getCompany() != null) {
+
+                        response.setCompanyId(
+                                recruiter.getCompany().getId()
+                        );
+
+                        response.setCompanyName(
+                                recruiter.getCompany().getCompanyName()
+                        );
+                    }
 
                 return response;
 
@@ -123,14 +130,20 @@ public RecruiterResponse getRecruiterById(Long id) {
     response.setEmail(recruiter.getEmail());
 
     if (recruiter.getCompany() != null) {
-        response.setCompanyName(recruiter.getCompany().getCompanyName());
-    }
 
+        response.setCompanyId(
+                recruiter.getCompany().getId()
+        );
+
+        response.setCompanyName(
+                recruiter.getCompany().getCompanyName()
+        );
+    }
     return response;
 }
 
 @Transactional
-public RecruiterResponse updateRecruiter(Long id, RecruiterRequest request) {
+public RecruiterResponse updateRecruiter(Long id, RecruiterUpdateRequest request) {
 
     User recruiter = userRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Recruiter not found"));
@@ -146,22 +159,30 @@ public RecruiterResponse updateRecruiter(Long id, RecruiterRequest request) {
     recruiter.setEmail(request.getEmail());
 
     // Encode new password
+    if (request.getPassword() != null &&
+    !request.getPassword().isBlank()) {
+
     recruiter.setPassword(
             passwordEncoder.encode(request.getPassword())
     );
+    }
 
     recruiter.setCompany(company);
 
     User updatedRecruiter = userRepository.save(recruiter);
 
     RecruiterResponse response = new RecruiterResponse();
-    response.setId(updatedRecruiter.getId());
-    response.setName(updatedRecruiter.getName());
-    response.setEmail(updatedRecruiter.getEmail());
-    response.setCompanyName(company.getCompanyName());
 
-    return response;
-}
+        response.setId(updatedRecruiter.getId());
+        response.setName(updatedRecruiter.getName());
+        response.setEmail(updatedRecruiter.getEmail());
+
+        response.setCompanyId(company.getId());
+
+        response.setCompanyName(company.getCompanyName());
+
+        return response;
+        }
 
 @Transactional
 public void deleteRecruiter(Long id) {
