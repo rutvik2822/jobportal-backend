@@ -14,6 +14,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
+import java.security.Principal;
+
+import com.jobportal.dto.ChangePasswordRequest;
+
 @Tag(
     name = "Authentication",
     description = "APIs for user registration and authentication using JWT."
@@ -55,4 +59,16 @@ public class AuthController {
     public String login(@RequestBody LoginRequest request) {
         return authService.login(request);
     }
+    @PostMapping("/change-password")
+public String changePassword(
+        @RequestBody ChangePasswordRequest request,
+        Principal principal) {
+
+    return authService.changePassword(
+            principal.getName(),
+            request.getCurrentPassword(),
+            request.getNewPassword(),
+            request.getConfirmPassword()
+    );
+}
 }

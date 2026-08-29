@@ -1,8 +1,15 @@
 package com.jobportal.controller;
 
+import java.security.Principal;
+
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.jobportal.dto.UserProfileResponse;
+import com.jobportal.service.UserService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -17,6 +24,12 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @RequestMapping("/api/user")
 public class UserController {
 
+    private final UserService userService;
+
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
+
     @Operation(
         summary = "Verify User Access",
         description = "Returns a confirmation message indicating that the authenticated user has access to protected USER endpoints."
@@ -30,4 +43,30 @@ public class UserController {
     public String userAccess() {
         return "User access granted";
     }
+
+    @Operation(
+        summary = "Get User Profile",
+        description = "Retrieves the profile information of the currently authenticated user."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Profile retrieved successfully"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "403", description = "Access denied"),
+        @ApiResponse(responseCode = "404", description = "User not found")
+    })
+    @GetMapping("/profile")
+    public UserProfileResponse getProfile(Principal principal) {
+
+        return userService.getProfile(principal.getName());
+    }
+    @PutMapping("/profile")
+public UserProfileResponse updateProfile(
+        @RequestParam String name,
+        Principal principal) {
+
+    return userService.updateProfile(
+            principal.getName(),
+            name
+    );
+}
 }

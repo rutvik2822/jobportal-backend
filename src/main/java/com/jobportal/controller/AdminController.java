@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.jobportal.dto.AdminDashboardResponse;
 import com.jobportal.dto.ApplicationResponse;
 import com.jobportal.service.ApplicationService;
 
@@ -41,4 +42,28 @@ public class AdminController {
     public List<ApplicationResponse> getApplications() {
         return applicationService.getAllApplications();
     }
+
+    @Operation(
+    summary = "Get Admin Dashboard Statistics",
+    description = "Retrieves application statistics and application counts per job for SUPER_ADMIN."
+)
+@ApiResponses(value = {
+    @ApiResponse(
+        responseCode = "200",
+        description = "Dashboard statistics retrieved successfully"
+    ),
+    @ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized"
+    ),
+    @ApiResponse(
+        responseCode = "403",
+        description = "Access denied"
+    )
+})
+@GetMapping("/dashboard")
+public AdminDashboardResponse getDashboard() {
+
+    return applicationService.getAdminDashboard();
+}
 }

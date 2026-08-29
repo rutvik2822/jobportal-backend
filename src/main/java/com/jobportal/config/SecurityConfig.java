@@ -54,8 +54,14 @@ public class SecurityConfig {
                 // Public
                 .requestMatchers("/").permitAll()
 
-                // Authentication APIs
-                .requestMatchers("/api/auth/**").permitAll()
+                // Public Authentication APIs
+                .requestMatchers(
+                    "/api/auth/register",
+                    "/api/auth/login"
+                ).permitAll()
+
+                // Authenticated password change
+                .requestMatchers("/api/auth/change-password").authenticated()
 
                 // AI APIs
                 .requestMatchers("/api/ai/**").permitAll()

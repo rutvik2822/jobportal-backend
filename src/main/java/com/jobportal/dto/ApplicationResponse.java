@@ -7,6 +7,8 @@ public class ApplicationResponse {
 
     private Long id;
 
+    private Long jobId;
+
     private String userEmail;
 
     private String jobTitle;
@@ -16,4 +18,5 @@ public class ApplicationResponse {
     private String status;
 
     private String resumeFileName; 
+
 }

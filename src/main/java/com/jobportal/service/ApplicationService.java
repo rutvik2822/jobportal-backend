@@ -10,17 +10,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.jobportal.dto.AdminDashboardResponse;
 import com.jobportal.dto.ApplicationResponse;
 import com.jobportal.dto.recruiter.RecruiterDashboardResponse;
 import com.jobportal.entity.Application;
 import com.jobportal.entity.Job;
 import com.jobportal.entity.User;
-import com.jobportal.repository.ApplicationRepository;
-import com.jobportal.repository.JobRepository;
-import com.jobportal.repository.UserRepository;
 import com.jobportal.exception.DuplicateApplicationException;
 import com.jobportal.exception.ResourceNotFoundException;
 import com.jobportal.exception.UnauthorizedException;
+import com.jobportal.repository.ApplicationRepository;
+import com.jobportal.repository.JobRepository;
+import com.jobportal.repository.UserRepository;
 
 @Service
 public class ApplicationService {
@@ -143,6 +144,8 @@ if (applicationRepository.findByUserIdAndJobId(user.getId(), job.getId()).isPres
                 new ApplicationResponse();
 
         response.setId(app.getId());
+        
+        response.setJobId(job.getId());
 
         response.setUserEmail(user.getEmail());
 
@@ -219,6 +222,8 @@ public List<ApplicationResponse> getApplicationsByUser(String email) {
 
         response.setId(app.getId());
 
+        response.setJobId(job.getId());
+
         response.setJobTitle(job.getTitle());
 
         response.setUserEmail(user.getEmail());
@@ -261,6 +266,7 @@ public List<ApplicationResponse> getApplicationsForRecruiter(String email) {
         ApplicationResponse response = new ApplicationResponse();
 
         response.setId(app.getId());
+        response.setJobId(job.getId());
         response.setUserEmail(candidate.getEmail());
         response.setJobTitle(job.getTitle());
         response.setMatchScore(app.getMatchScore());
@@ -316,6 +322,73 @@ public RecruiterDashboardResponse getRecruiterDashboard(String email) {
                     recruiter.getId(),
                     "REJECTED")
     );
+
+    return response;
+}
+
+@Transactional(readOnly = true)
+public AdminDashboardResponse getAdminDashboard() {
+
+    List<Application> applications =
+            applicationRepository.findAll();
+
+    long accepted = 0;
+    long rejected = 0;
+    long pending = 0;
+
+    java.util.Map<String, Long> applicationsPerJob =
+            new java.util.LinkedHashMap<>();
+
+    for (Application app : applications) {
+
+        if (app == null || app.getJob() == null) {
+            continue;
+        }
+
+        String status = app.getStatus();
+
+        if ("ACCEPTED".equalsIgnoreCase(status)) {
+            accepted++;
+        } else if ("REJECTED".equalsIgnoreCase(status)) {
+            rejected++;
+        } else {
+            pending++;
+        }
+
+        String jobTitle = app.getJob().getTitle();
+
+        applicationsPerJob.put(
+                jobTitle,
+                applicationsPerJob.getOrDefault(jobTitle, 0L) + 1
+        );
+    }
+
+    AdminDashboardResponse response =
+            new AdminDashboardResponse();
+
+    response.setTotalApplications(
+            applications.size()
+    );
+
+    response.setAccepted(accepted);
+
+    response.setRejected(rejected);
+
+    response.setPending(pending);
+
+    List<AdminDashboardResponse.JobApplicationCount>
+            jobCounts = new ArrayList<>();
+
+    applicationsPerJob.forEach((job, count) ->
+            jobCounts.add(
+                    new AdminDashboardResponse.JobApplicationCount(
+                            job,
+                            count
+                    )
+            )
+    );
+
+    response.setApplicationsPerJob(jobCounts);
 
     return response;
 }
