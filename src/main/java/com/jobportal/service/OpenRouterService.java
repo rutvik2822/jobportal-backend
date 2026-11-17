@@ -9,6 +9,8 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import org.springframework.http.client.reactive.JdkClientHttpConnector;
+
 @Service
 public class OpenRouterService {
 
@@ -16,12 +18,13 @@ public class OpenRouterService {
     private String apiKey;
 
     private final WebClient webClient = WebClient.builder()
-            .baseUrl("https://openrouter.ai")
-            .defaultHeader(
-                    HttpHeaders.CONTENT_TYPE,
-                    MediaType.APPLICATION_JSON_VALUE
-            )
-            .build();
+        .clientConnector(new JdkClientHttpConnector())
+        .baseUrl("https://openrouter.ai")
+        .defaultHeader(
+                HttpHeaders.CONTENT_TYPE,
+                MediaType.APPLICATION_JSON_VALUE
+        )
+        .build();
 
     // ==============================
     // JOB ANALYSIS
@@ -124,7 +127,7 @@ public class OpenRouterService {
 
         Map<String, Object> requestBody = Map.of(
 
-                "model", "openai/gpt-3.5-turbo",
+                "model", "openrouter/free",
 
                 "messages", List.of(
 
@@ -166,11 +169,18 @@ public class OpenRouterService {
 
             return response;
 
-        } catch (Exception e) {
+        } catch (org.springframework.web.reactive.function.client.WebClientResponseException e) {
 
-            e.printStackTrace();
+    System.err.println("OpenRouter Status: " + e.getStatusCode());
+    System.err.println("OpenRouter Response: " + e.getResponseBodyAsString());
 
-            return "AI Error: " + e.getMessage();
-        }
+    return "AI Error: " + e.getResponseBodyAsString();
+
+} catch (Exception e) {
+
+    e.printStackTrace();
+
+    return "AI Error: " + e.getMessage();
+}
     }
 }
