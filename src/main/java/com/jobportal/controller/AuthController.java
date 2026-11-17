@@ -3,6 +3,7 @@ package com.jobportal.controller;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.jobportal.dto.LoginRequest;
@@ -69,6 +70,24 @@ public String changePassword(
             request.getCurrentPassword(),
             request.getNewPassword(),
             request.getConfirmPassword()
+    );
+}
+@PostMapping("/forgot-password")
+public String forgotPassword(
+        @RequestParam String email) {
+
+    return authService.requestPasswordReset(email);
+}
+@PostMapping("/reset-password")
+public String resetPassword(
+        @RequestParam String token,
+        @RequestParam String newPassword,
+        @RequestParam String confirmPassword) {
+
+    return authService.resetPassword(
+            token,
+            newPassword,
+            confirmPassword
     );
 }
 }

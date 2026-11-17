@@ -56,8 +56,10 @@ public class SecurityConfig {
 
                 // Public Authentication APIs
                 .requestMatchers(
-                    "/api/auth/register",
-                    "/api/auth/login"
+                   "/api/auth/register",
+                    "/api/auth/login",
+                    "/api/auth/forgot-password",
+                    "/api/auth/reset-password"
                 ).permitAll()
 
                 // Authenticated password change
