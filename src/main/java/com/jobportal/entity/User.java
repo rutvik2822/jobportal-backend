@@ -43,4 +43,17 @@ public class User {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_id")
     private Company company;
+
+    // Additional profile information
+    @Column(name = "phone_number")
+    private String phoneNumber;
+
+    @Column(name = "city")
+    private String city;
+
+    @Column(name = "state")
+    private String state;
+
+    @Column(name = "profile_picture_url", length = 1000)
+    private String profilePictureUrl;
 }

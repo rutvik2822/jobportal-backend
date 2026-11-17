@@ -4,11 +4,12 @@ import java.security.Principal;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.jobportal.dto.UserProfileResponse;
+import com.jobportal.dto.UserProfileUpdateRequest;
 import com.jobportal.service.UserService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -56,17 +57,30 @@ public class UserController {
     })
     @GetMapping("/profile")
     public UserProfileResponse getProfile(Principal principal) {
-
         return userService.getProfile(principal.getName());
     }
-    @PutMapping("/profile")
-public UserProfileResponse updateProfile(
-        @RequestParam String name,
-        Principal principal) {
 
-    return userService.updateProfile(
-            principal.getName(),
-            name
-    );
-}
+    @Operation(
+        summary = "Update User Profile",
+        description = "Updates the name, phone number, city, and state of the authenticated user."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Profile updated successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid profile information"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "404", description = "User not found")
+    })
+    @PutMapping("/profile")
+    public UserProfileResponse updateProfile(
+            @RequestBody UserProfileUpdateRequest request,
+            Principal principal) {
+
+        return userService.updateProfile(
+                principal.getName(),
+                request.getName(),
+                request.getPhoneNumber(),
+                request.getCity(),
+                request.getState()
+        );
+    }
 }

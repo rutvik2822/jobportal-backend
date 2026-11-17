@@ -14,4 +14,12 @@ public class UserProfileResponse {
     private String role;
 
     private String companyName;
+
+    private String phoneNumber;
+
+    private String city;
+
+    private String state;
+
+    private String profilePictureUrl;
 }
